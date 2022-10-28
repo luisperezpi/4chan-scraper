@@ -2,7 +2,7 @@ import scrapper_4chan as s4c
 import logging
 import os
 import json
-
+import re
 
 THREADS_DIR = 'threads/'
 DATA_DIR = 'data/'
@@ -57,13 +57,19 @@ THREAD_FILTER = [
 
 
 def configure_logger(boardname, board_dir):
+    """ Configuración de logger por boardname """
     logger = logging.getLogger(boardname)
-    info_handler = logging.FileHandler(os.path.join(board_dir, f'{boardname}.log'))
+    logger.setLevel(logging.INFO)
+    info_handler = logging.FileHandler(os.path.join(board_dir, f'info.log'))
     info_handler.setLevel(logging.INFO)
-    info_handler.setLevel(logging.INFO)
-    info_format = logging.Formatter('[%(asctime)s]:[%(levelname)s] %(name)s - %(message)s')
-    info_handler.setFormatter(info_format)
+    format = logging.Formatter('[%(asctime)s]:[%(levelname)s] %(name)s - %(message)s')
+    info_handler.setFormatter(format)
+
+    error_handler = logging.FileHandler(os.path.join(board_dir, f'error.log'))
+    error_handler.setLevel(logging.ERROR)
+    error_handler.setFormatter(format)
     logger.addHandler(info_handler)
+    logger.addHandler(error_handler)
     return logger
 
 def full_update_board(boardname, board_dir="", catalog_f='catalog.json'):
@@ -79,40 +85,120 @@ def full_update_board(boardname, board_dir="", catalog_f='catalog.json'):
     logger = configure_logger(boardname, board_dir)
     try:
         catalog = s4c.get_catalog(boardname, refresh=True)
-        logging.info(f'Scrapping {boardname} board...')
-        logging.info(f'>>>>Found {len(list(catalog.keys()))} threads on catalog...')
-        with open(os.paht.join(board_dir, 'catalog.json'), 'r') as file:
-            catalog_historic = json.load(file)
+        logger.info(f'Scrapping {boardname} board...')
+        total = len(list(catalog.keys()))
+        logger.info(f'>>>>Found {total} threads on catalog...')
+        catalog_f = os.path.join(board_dir, 'catalog.json')
+        if os.path.exists(catalog_f):
+            with open(catalog_f, 'r') as file:
+                catalog_historic = json.load(file)
+        else:
+            catalog_historic={}
 
         update_dict = {}
-        for thread_no in catalog.keys():
+        i=0
+        for thread_no, value in catalog.items():
+            i+=1
             if thread_no in catalog_historic.keys():
-                if catalog[thread_no]['last_modified'] <= catalog_historic[thread_no]['last_modified']:
-                    logging.info(f'>>Thread {thread_no} not modified since last download.')
+                if value['last_modified'] <= catalog_historic[thread_no]['last_modified']:
+                    logger.info(f'>>Thread {thread_no} not modified since last download. [{i}/{total}]')
                     continue
             try:
                 thread = s4c.get_thread(boardname, thread_no, refresh=True)
                 list_posts = []
-                for post in thread['posts']:
+                for post in thread:
                     list_posts.append({key: post[key] for key in post if key in THREAD_FILTER})
-                with open(os.paht.join(threads_dir, f'{thread_no}.json'), 'w') as file:
+                with open(os.path.join(threads_dir, f'{thread_no}.json'), 'w') as file:
                     json.dump(list_posts, file)
-                dict_thread = { key: catalog[thread_no][key]  for key in catalog[thread_no] if key in CATALOG_FILTER}
+                dict_thread = { key: value[key]  for key in value if key in CATALOG_FILTER}
                 update_dict[thread_no] = dict_thread
-                logging.info(f'>>Thread {thread_no} downloaded.')
-                logging.info(f'>>>>Found {len(list_posts)} posts.')
+                dict_thread['last_downloaded'] = dict_thread['last_modified']
+                logger.info(f'>>Thread {thread_no} downloaded. [{i}/{total}]')
+                logger.info(f'>>>>Found {len(list_posts)} posts.')
             except Exception as e:
                 logger.exception(f'Error tomando información del thread {thread_no} en board {boardname}.')
                 break
                     
         catalog_historic.update(update_dict)
-        with open(os.paht.join(board_dir, 'catalog.json'), 'w') as file:
+        with open(os.path.join(board_dir, 'catalog.json'), 'w') as file:
             json.dump(catalog_historic, file)
-        logging.info(f'>>Updated historic catalog with new information.')
+        logger.info(f'>>Updated historic catalog with new information.')
     except Exception as e:
         logger.exception(f'Error tomando catalog del board {boardname}.')
         
 
+def _quick_search_thread(pattern, thread_dict):
+    search_in = ""
+    if 'sub' in thread_dict:
+        search_in = search_in + thread_dict['sub'] + "\n"
+    if 'com' in thread_dict:
+        search_in = search_in + thread_dict['com'] + "\n"
+    if 'last_replies' in thread_dict:
+        for rep in thread_dict['last_replies']:
+            if 'com' in thread_dict:
+                search_in = search_in + thread_dict['com'] + "\n"
+    return re.search(pattern.lower(), search_in.lower())
+
+
+def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.json'):
+    if board_dir == "":
+        board_dir = f'{boardname}/'
+    board_dir = os.path.join(DATA_DIR, board_dir)
+    threads_dir = os.path.join(board_dir, THREADS_DIR)
+    if not os.path.exists(board_dir):
+        os.mkdir(board_dir)
+    if not os.path.exists(threads_dir):
+        os.mkdir(threads_dir)
+
+    logger = configure_logger(boardname, board_dir)
+    try:
+        catalog = s4c.get_catalog(boardname, refresh=True)
+        logger.info(f'Scrapping {boardname} board...')
+        total = len(list(catalog.keys()))
+        logger.info(f'>>>>Found {total} threads on catalog...')
+        catalog_f = os.path.join(board_dir, 'catalog.json')
+        if os.path.exists(catalog_f):
+            with open(catalog_f, 'r') as file:
+                catalog_historic = json.load(file)
+        else:
+            catalog_historic={}
+
+        update_dict = {}
+        i=0
+        for thread_no, value in catalog.items():
+            i+=1
+            if thread_no in catalog_historic.keys():
+                if value['last_modified'] <= catalog_historic[thread_no]['last_downloaded']:
+                    logger.info(f'>>Thread {thread_no} not modified since last download. [{i}/{total}]')
+                    continue
+
+            if not _quick_search_thread(pattern, value):
+                continue
+
+
+            try:
+                thread = s4c.get_thread(boardname, thread_no, refresh=True)
+                list_posts = []
+                for post in thread:
+                    list_posts.append({key: post[key] for key in post if key in THREAD_FILTER})
+                with open(os.path.join(threads_dir, f'{thread_no}.json'), 'w') as file:
+                    json.dump(list_posts, file)
+                dict_thread = { key: value[key]  for key in value if key in CATALOG_FILTER}
+                dict_thread['last_downloaded'] = dict_thread['last_modified']
+                update_dict[thread_no] = dict_thread
+                logger.info(f'>>Thread {thread_no} downloaded. [{i}/{total}]')
+                logger.info(f'>>>>Found {len(list_posts)} posts.')
+            except Exception as e:
+                logger.exception(f'Error tomando información del thread {thread_no} en board {boardname}.')
+                break
+                    
+        catalog_historic.update(update_dict)
+        with open(os.path.join(board_dir, 'catalog.json'), 'w') as file:
+            json.dump(catalog_historic, file)
+        logger.info(f'>>Updated historic catalog with new information.')
+    except Exception as e:
+        logger.exception(f'Error tomando catalog del board {boardname}.')
+        
 
 
     
