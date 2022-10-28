@@ -39,6 +39,22 @@ TEMPLATE = {
     }
 }
 
+
+# signal TOR for a new connection 
+def renew_connection():
+    with Controller.from_port(port = 9051) as controller:
+        controller.authenticate(password="password")
+        controller.signal(Signal.NEWNYM)
+
+def get_tor_session():
+    session = requests.session()
+    # Tor uses the 9050 port as the default socks port
+    session.proxies = {'http':  'socks5://127.0.0.1:9050',
+                       'https': 'socks5://127.0.0.1:9050'}
+    return session
+
+session = get_tor_session()
+
 #
 # TODO: Ahora mismo cada llamada de descarga tiene asociado un sleep 1 sec
 # La api de 4chan solo permite una petición por segundo. 
