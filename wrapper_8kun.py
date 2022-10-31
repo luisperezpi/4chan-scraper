@@ -1,4 +1,4 @@
-import scrapper_4chan as s4c
+import scrapper_8kun as s8k
 import logging
 import os
 import json
@@ -12,7 +12,7 @@ SEARCH_DIR = 'data/searchs'
 
 CATALOG_FILTER = [
     'no',
-    'closed',
+    'locked',
     'time',
     'name',
     'trip',
@@ -87,7 +87,7 @@ def full_update_board(boardname, board_dir="", catalog_f='catalog.json'):
 
     logger = configure_logger(boardname, board_dir)
     try:
-        catalog = s4c.get_catalog(boardname, refresh=True)
+        catalog = s8k.get_catalog(boardname, refresh=True)
         logger.info(f'Scrapping {boardname} board...')
         total = len(list(catalog.keys()))
         logger.info(f'>>>>Found {total} threads on catalog...')
@@ -107,7 +107,7 @@ def full_update_board(boardname, board_dir="", catalog_f='catalog.json'):
                     logger.info(f'>>Thread {thread_no} not modified since last download. [{i}/{total}]')
                     continue
             try:
-                thread = s4c.get_thread(boardname, thread_no, refresh=True)
+                thread = s8k.get_thread(boardname, thread_no, refresh=True)
                 list_posts = []
                 for post in thread:
                     list_posts.append({key: post[key] for key in post if key in THREAD_FILTER})
@@ -155,7 +155,7 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
 
     logger = configure_logger(boardname, board_dir)
     try:
-        catalog = s4c.get_catalog(boardname, refresh=True)
+        catalog = s8k.get_catalog(boardname, refresh=True)
         logger.info(f'Scrapping {boardname} board...')
         total = len(list(catalog.keys()))
         logger.info(f'>>>>Found {total} threads on catalog...')
@@ -184,7 +184,7 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
             logger.info(f'>>Thread {thread_no} checks the patterns search. [{i}/{total}]')
             list_found_threads.append(thread_no)
             try:
-                thread = s4c.get_thread(boardname, thread_no, refresh=True)
+                thread = s8k.get_thread(boardname, thread_no, refresh=True)
                 list_posts = []
                 for post in thread:
                     list_posts.append({key: post[key] for key in post if key in THREAD_FILTER})
@@ -210,10 +210,15 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
         
     
 def search_keyword_4chan(pattern, boardname_list=[]):
-    if len(boardname_list)==0:
-        boardname_list = s4c.get_all_boards_name()
+    if len(boardname_list)== 0:
+        boardname_dict = s8k.get_all_boards_dict()
+        logger.info(f'There are {len(list(boardname_dict.keys()))} boards in 8kun, selecting only active ones...')
+        boardname_list = []
+        for boardname, value in boardname_dict.items():
+            if value['active'] > 0:
+                boardname_list.append(boardname)
     logger = configure_logger('main', DATA_DIR)
-    logger.info(f'Found {len(boardname_list)} boards...')
+    logger.info(f'Found {len(boardname_list)} boards in list to scrape...')
     search_dict = {}
     now = datetime.now()
     now_str = now.strftime("%d-%m-%Y_%H:%M:%S")

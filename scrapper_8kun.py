@@ -1,6 +1,3 @@
-
-from concurrent.futures import thread
-from distutils import extension
 import requests
 import time
 
