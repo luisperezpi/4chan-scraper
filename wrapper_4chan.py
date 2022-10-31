@@ -58,6 +58,19 @@ THREAD_FILTER = [
     'archived_on'
 ]
 
+POLITICAL_BOARDS = [
+    'pol',
+    'bant',
+    'biz',
+    'lgbt',
+    'news',
+    'k',
+    'int',
+    'his',
+]
+POLITICAL_BOARDS = [
+    'pol'
+]
 
 def configure_logger(boardname, board_dir):
     """ Configuración de logger por boardname """
@@ -75,7 +88,7 @@ def configure_logger(boardname, board_dir):
     logger.addHandler(error_handler)
     return logger
 
-def full_update_board(boardname, board_dir="", catalog_f='catalog.json'):
+def full_update_board(boardname, board_dir="", catalog_f='catalog.json', logger=None):
     if board_dir == "":
         board_dir = f'{boardname}/'
     board_dir = os.path.join(BOARDS_DIR, board_dir)
@@ -85,7 +98,8 @@ def full_update_board(boardname, board_dir="", catalog_f='catalog.json'):
     if not os.path.exists(threads_dir):
         os.mkdir(threads_dir)
 
-    logger = configure_logger(boardname, board_dir)
+    if not logger:
+        logger = configure_logger(boardname, board_dir)
     try:
         catalog = s4c.get_catalog(boardname, refresh=True)
         logger.info(f'Scrapping {boardname} board...')
@@ -114,15 +128,14 @@ def full_update_board(boardname, board_dir="", catalog_f='catalog.json'):
                 with open(os.path.join(threads_dir, f'{thread_no}.json'), 'w') as file:
                     json.dump(list_posts, file)
                 dict_thread = { key: value[key]  for key in value if key in CATALOG_FILTER}
-                update_dict[thread_no] = dict_thread
                 dict_thread['last_downloaded'] = dict_thread['last_modified']
+                catalog_historic[thread_no] = dict_thread
                 logger.info(f'>>Thread {thread_no} downloaded. [{i}/{total}]')
                 logger.info(f'>>>>Found {len(list_posts)} posts.')
             except Exception as e:
                 logger.exception(f'Error tomando información del thread {thread_no} en board {boardname}.')
                 break
-                    
-        catalog_historic.update(update_dict)
+        
         with open(os.path.join(board_dir, 'catalog.json'), 'w') as file:
             json.dump(catalog_historic, file)
         logger.info(f'>>Updated historic catalog with new information.')
@@ -143,7 +156,7 @@ def _quick_search_thread(pattern, thread_dict):
     return re.search(pattern.lower(), search_in.lower())
 
 
-def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.json'):
+def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.json', logger=None):
     if board_dir == "":
         board_dir = f'{boardname}/'
     board_dir = os.path.join(BOARDS_DIR, board_dir)
@@ -153,7 +166,8 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
     if not os.path.exists(threads_dir):
         os.mkdir(threads_dir)
 
-    logger = configure_logger(boardname, board_dir)
+    if not logger:
+        logger = configure_logger(boardname, board_dir)
     try:
         catalog = s4c.get_catalog(boardname, refresh=True)
         logger.info(f'Scrapping {boardname} board...')
@@ -168,18 +182,18 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
 
         list_found_threads = []
 
-        update_dict = {}
         i=0
         for thread_no, value in catalog.items():
             i+=1
             if thread_no in catalog_historic.keys():
+                print(value['last_modified'])
+                print(catalog_historic[thread_no]['last_downloaded'])
                 if value['last_modified'] <= catalog_historic[thread_no]['last_downloaded']:
                     logger.info(f'>>Thread {thread_no} not modified since last download. [{i}/{total}]')
                     continue
 
             if not _quick_search_thread(pattern, value):
                 continue
-
 
             logger.info(f'>>Thread {thread_no} checks the patterns search. [{i}/{total}]')
             list_found_threads.append(thread_no)
@@ -192,14 +206,14 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
                     json.dump(list_posts, file)
                 dict_thread = { key: value[key]  for key in value if key in CATALOG_FILTER}
                 dict_thread['last_downloaded'] = dict_thread['last_modified']
-                update_dict[thread_no] = dict_thread
+                catalog_historic[thread_no] = dict_thread
                 logger.info(f'>>Thread {thread_no} downloaded. [{i}/{total}]')
                 logger.info(f'>>>>Found {len(list_posts)} posts.')
             except Exception as e:
                 logger.exception(f'Error tomando información del thread {thread_no} en board {boardname}.')
                 break
-                    
-        catalog_historic.update(update_dict)
+        for thread_no in list_found_threads:
+            print(thread_no in catalog_historic.keys())
         with open(os.path.join(board_dir, 'catalog.json'), 'w') as file:
             json.dump(catalog_historic, file)
         logger.info(f'>>Updated historic catalog with new information.')
@@ -218,7 +232,7 @@ def search_keyword_4chan(pattern, boardname_list=[]):
     now = datetime.now()
     now_str = now.strftime("%d-%m-%Y_%H:%M:%S")
     for boardname in boardname_list:
-        list_found_threads = search_keyword_board(boardname, pattern)
+        list_found_threads = search_keyword_board(boardname, pattern, logger=logger)
         logger.info(f'>>Found {len(list_found_threads)} matching threads in board {boardname}')
         search_dict[boardname] = list_found_threads
     with open(os.path.join(SEARCH_DIR, f'search_{pattern}_{now_str}.json'), 'w') as file:
@@ -231,4 +245,4 @@ if __name__ == '__main__':
         os.mkdir(DATA_DIR)
     if not os.path.exists(SEARCH_DIR):
         os.mkdir(SEARCH_DIR)
-    search_keyword_4chan("russia|nafo|nato|ukrain")
+    search_keyword_4chan("russia|nafo|nato|ukrain", boardname_list=POLITICAL_BOARDS)

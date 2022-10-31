@@ -1,7 +1,5 @@
 import requests
 import time
-from stem import Signal
-from stem.control import Controller
 
 _metadata = {}
 
