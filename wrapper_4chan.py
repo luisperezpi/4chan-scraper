@@ -68,9 +68,6 @@ POLITICAL_BOARDS = [
     'int',
     'his',
 ]
-POLITICAL_BOARDS = [
-    'pol'
-]
 
 def configure_logger(boardname, board_dir):
     """ Configuración de logger por boardname """
@@ -112,12 +109,12 @@ def full_update_board(boardname, board_dir="", catalog_f='catalog.json', logger=
         else:
             catalog_historic={}
 
-        update_dict = {}
+
         i=0
         for thread_no, value in catalog.items():
             i+=1
-            if thread_no in catalog_historic.keys():
-                if value['last_modified'] <= catalog_historic[thread_no]['last_modified']:
+            if str(thread_no) in catalog_historic:
+                if value['last_modified'] <= catalog_historic[str(thread_no)]['last_downloaded']:
                     logger.info(f'>>Thread {thread_no} not modified since last download. [{i}/{total}]')
                     continue
             try:
@@ -138,7 +135,7 @@ def full_update_board(boardname, board_dir="", catalog_f='catalog.json', logger=
         
         with open(os.path.join(board_dir, 'catalog.json'), 'w') as file:
             json.dump(catalog_historic, file)
-        logger.info(f'>>Updated historic catalog with new information.')
+            logger.info(f'>>Updated historic catalog with new information. ({file.name})')
     except Exception as e:
         logger.exception(f'Error tomando catalog del board {boardname}.')
         
@@ -185,10 +182,8 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
         i=0
         for thread_no, value in catalog.items():
             i+=1
-            if thread_no in catalog_historic.keys():
-                print(value['last_modified'])
-                print(catalog_historic[thread_no]['last_downloaded'])
-                if value['last_modified'] <= catalog_historic[thread_no]['last_downloaded']:
+            if str(thread_no) in catalog_historic:
+                if value['last_modified'] <= catalog_historic[str(thread_no)]['last_downloaded']:
                     logger.info(f'>>Thread {thread_no} not modified since last download. [{i}/{total}]')
                     continue
 
@@ -212,11 +207,10 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
             except Exception as e:
                 logger.exception(f'Error tomando información del thread {thread_no} en board {boardname}.')
                 break
-        for thread_no in list_found_threads:
-            print(thread_no in catalog_historic.keys())
+        
         with open(os.path.join(board_dir, 'catalog.json'), 'w') as file:
             json.dump(catalog_historic, file)
-        logger.info(f'>>Updated historic catalog with new information.')
+            logger.info(f'>>Updated historic catalog with new information. ({file.name})')
         return list_found_threads
     except Exception as e:
         logger.exception(f'Error tomando catalog del board {boardname}.')
@@ -245,4 +239,6 @@ if __name__ == '__main__':
         os.mkdir(DATA_DIR)
     if not os.path.exists(SEARCH_DIR):
         os.mkdir(SEARCH_DIR)
+    if not os.path.exists(BOARDS_DIR):
+        os.mkdir(BOARDS_DIR)
     search_keyword_4chan("russia|nafo|nato|ukrain", boardname_list=POLITICAL_BOARDS)
