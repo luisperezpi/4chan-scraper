@@ -154,6 +154,12 @@ def _quick_search_thread(pattern, thread_dict):
 
 
 def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.json', logger=None):
+    context_dict = {
+        "found_list" : [],
+        "total_threads" : 0,
+        "relevant_threads" : 0,
+        "already_dw_thread" : 0,
+    }
     if board_dir == "":
         board_dir = f'{boardname}/'
     board_dir = os.path.join(BOARDS_DIR, board_dir)
@@ -178,17 +184,20 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
             catalog_historic={}
 
         list_found_threads = []
+        relevant = 0
+        already_dw = 0
 
         i=0
         for thread_no, value in catalog.items():
             i+=1
+            if not _quick_search_thread(pattern, value):
+                continue
+            relevant +=1
             if str(thread_no) in catalog_historic:
                 if value['last_modified'] <= catalog_historic[str(thread_no)]['last_downloaded']:
                     logger.info(f'>>Thread {thread_no} not modified since last download. [{i}/{total}]')
+                    already_dw+=1
                     continue
-
-            if not _quick_search_thread(pattern, value):
-                continue
 
             logger.info(f'>>Thread {thread_no} checks the patterns search. [{i}/{total}]')
             list_found_threads.append(thread_no)
@@ -211,7 +220,12 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
         with open(os.path.join(board_dir, 'catalog.json'), 'w') as file:
             json.dump(catalog_historic, file)
             logger.info(f'>>Updated historic catalog with new information. ({file.name})')
-        return list_found_threads
+        return {
+            "found_list" : list_found_threads,
+            "total_threads" : total,
+            "relevant_threads" : relevant,
+            "already_dw_thread" : already_dw,
+        }
     except Exception as e:
         logger.exception(f'Error tomando catalog del board {boardname}.')
 
@@ -226,9 +240,10 @@ def search_keyword_4chan(pattern, boardname_list=[]):
     now = datetime.now()
     now_str = now.strftime("%d-%m-%Y_%H:%M:%S")
     for boardname in boardname_list:
-        list_found_threads = search_keyword_board(boardname, pattern, logger=logger)
-        logger.info(f'>>Found {len(list_found_threads)} matching threads in board {boardname}')
-        search_dict[boardname] = list_found_threads
+        dict_found_threads = search_keyword_board(boardname, pattern, logger=logger)
+        l =  len(dict_found_threads['total_threads'])
+        logger.info(f'>>Found {l} matching threads in board {boardname}')
+        search_dict[boardname] = dict_found_threads
     with open(os.path.join(SEARCH_DIR, f'search_{pattern}_{now_str}.json'), 'w') as file:
         json.dump(search_dict, file)
 
