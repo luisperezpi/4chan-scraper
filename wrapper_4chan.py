@@ -59,6 +59,13 @@ THREAD_FILTER = [
 ]
 
 POLITICAL_BOARDS = [
+    'pol',
+    'bant',
+    'biz',
+    'lgbt',
+    'news',
+    'k',
+    'int',
     'his',
 ]
 
