@@ -6,9 +6,9 @@ import re
 from datetime import datetime
 
 THREADS_DIR = 'threads/'
-DATA_DIR = 'data/'
-BOARDS_DIR = 'data/boards'
-SEARCH_DIR = 'data/searchs'
+DATA_DIR = '/home/luis/data/4chan'
+BOARDS_DIR = '/home/luis/data/4chan/boards'
+SEARCH_DIR = '/home/luis/data/4chan/searchs'
 
 CATALOG_FILTER = [
     'no',
