@@ -228,7 +228,12 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
         }
     except Exception as e:
         logger.exception(f'Error tomando catalog del board {boardname}.')
-
+        return {
+            "found_list" : [],
+            "total_threads" : 0,
+            "relevant_threads" : 0,
+            "already_dw_thread" : 0,
+        }
         
     
 def search_keyword_4chan(pattern, boardname_list=[]):
@@ -239,11 +244,13 @@ def search_keyword_4chan(pattern, boardname_list=[]):
     search_dict = {}
     now = datetime.now()
     now_str = now.strftime("%d-%m-%Y_%H:%M:%S")
+
     for boardname in boardname_list:
         dict_found_threads = search_keyword_board(boardname, pattern, logger=logger)
         l =  len(dict_found_threads['total_threads'])
         logger.info(f'>>Found {l} matching threads in board {boardname}')
         search_dict[boardname] = dict_found_threads
+
     with open(os.path.join(SEARCH_DIR, f'search_{pattern}_{now_str}.json'), 'w') as file:
         json.dump(search_dict, file)
 
