@@ -6,9 +6,9 @@ import re
 from datetime import datetime
 
 THREADS_DIR = 'threads/'
-DATA_DIR = '/home/luis/data/4chan'
-BOARDS_DIR = '/home/luis/data/4chan/boards'
-SEARCH_DIR = '/home/luis/data/4chan/searchs'
+DATA_DIR = 'data/4chan'
+BOARDS_DIR = 'data/4chan/boards'
+SEARCH_DIR = 'data/4chan/searchs'
 
 CATALOG_FILTER = [
     'no',
@@ -59,13 +59,6 @@ THREAD_FILTER = [
 ]
 
 POLITICAL_BOARDS = [
-    'pol',
-    'bant',
-    'biz',
-    'lgbt',
-    'news',
-    'k',
-    'int',
     'his',
 ]
 
@@ -186,6 +179,7 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
         list_found_threads = []
         relevant = 0
         already_dw = 0
+        not_refreshed = 0
 
         i=0
         for thread_no, value in catalog.items():
@@ -194,10 +188,12 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
                 continue
             relevant +=1
             if str(thread_no) in catalog_historic:
+                already_dw+=1
                 if value['last_modified'] <= catalog_historic[str(thread_no)]['last_downloaded']:
                     logger.info(f'>>Thread {thread_no} not modified since last download. [{i}/{total}]')
-                    already_dw+=1
+                    not_refreshed+=1
                     continue
+
 
             logger.info(f'>>Thread {thread_no} checks the patterns search. [{i}/{total}]')
             list_found_threads.append(thread_no)
@@ -224,7 +220,8 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
             "found_list" : list_found_threads,
             "total_threads" : total,
             "relevant_threads" : relevant,
-            "already_dw_thread" : already_dw,
+            "already_dw_threads" : already_dw,
+            "refreshed_threads" : already_dw - not_refreshed,
         }
     except Exception as e:
         logger.exception(f'Error tomando catalog del board {boardname}.')
@@ -232,7 +229,8 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
             "found_list" : [],
             "total_threads" : 0,
             "relevant_threads" : 0,
-            "already_dw_thread" : 0,
+            "already_dw_threads" : 0,
+            "refreshed_threads" : 0,
         }
         
     
@@ -247,7 +245,7 @@ def search_keyword_4chan(pattern, boardname_list=[]):
 
     for boardname in boardname_list:
         dict_found_threads = search_keyword_board(boardname, pattern, logger=logger)
-        l =  len(dict_found_threads['total_threads'])
+        l = dict_found_threads['total_threads']
         logger.info(f'>>Found {l} matching threads in board {boardname}')
         search_dict[boardname] = dict_found_threads
 
