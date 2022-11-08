@@ -104,7 +104,7 @@ def full_update_board(boardname, board_dir="", catalog_f='catalog.json', logger=
         for thread_no, value in catalog.items():
             i+=1
             if str(thread_no) in catalog_historic:
-                if value['last_modified'] <= catalog_historic[thread_no]['last_modified']:
+                if value['last_modified'] <= catalog_historic[str(thread_no)]['last_modified']:
                     logger.info(f'>>Thread {thread_no} not modified since last download. [{i}/{total}]')
                     continue
             try:
@@ -116,12 +116,12 @@ def full_update_board(boardname, board_dir="", catalog_f='catalog.json', logger=
                     json.dump(list_posts, file)
                 dict_thread = { key: value[key]  for key in value if key in CATALOG_FILTER}
                 dict_thread['last_downloaded'] = dict_thread['last_modified']
-                catalog_historic[thread_no] = dict_thread
+                catalog_historic[str(thread_no)] = dict_thread
                 logger.info(f'>>Thread {thread_no} downloaded. [{i}/{total}]')
                 logger.info(f'>>>>Found {len(list_posts)} posts.')
             except Exception as e:
                 logger.exception(f'Error tomando información del thread {thread_no} en board {boardname}.')
-                break
+                continue
                     
         with open(os.path.join(board_dir, 'catalog.json'), 'w') as file:
             json.dump(catalog_historic, file)
@@ -187,7 +187,7 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
             relevant +=1
             if str(thread_no) in catalog_historic:
                 already_dw+=1
-                if value['last_modified'] <= catalog_historic[thread_no]['last_downloaded']:
+                if value['last_modified'] <= catalog_historic[str(thread_no)]['last_downloaded']:
                     logger.info(f'>>Thread {thread_no} not modified since last download. [{i}/{total}]')
                     not_refreshed+=1
                     continue
@@ -205,12 +205,12 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
                     json.dump(list_posts, file)
                 dict_thread = { key: value[key]  for key in value if key in CATALOG_FILTER}
                 dict_thread['last_downloaded'] = dict_thread['last_modified']
-                catalog_historic[thread_no] = dict_thread
+                catalog_historic[str(thread_no)] = dict_thread
                 logger.info(f'>>Thread {thread_no} downloaded. [{i}/{total}]')
                 logger.info(f'>>>>Found {len(list_posts)} posts.')
             except Exception as e:
                 logger.exception(f'Error tomando información del thread {thread_no} en board {boardname}.')
-                break
+                continue
         
         if relevant > 0:
             with open(os.path.join(board_dir, 'catalog.json'), 'w') as file:

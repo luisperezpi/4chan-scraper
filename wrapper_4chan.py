@@ -132,7 +132,7 @@ def full_update_board(boardname, board_dir="", catalog_f='catalog.json', logger=
                 logger.info(f'>>>>Found {len(list_posts)} posts.')
             except Exception as e:
                 logger.exception(f'Error tomando información del thread {thread_no} en board {boardname}.')
-                break
+                continue
         
         with open(os.path.join(board_dir, 'catalog.json'), 'w') as file:
             json.dump(catalog_historic, file)
@@ -220,7 +220,7 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
                 logger.info(f'>>>>Found {len(list_posts)} posts.')
             except Exception as e:
                 logger.exception(f'Error tomando información del thread {thread_no} en board {boardname}.')
-                break
+                continue
         
         if relevant > 0:
             with open(os.path.join(board_dir, 'catalog.json'), 'w') as file:

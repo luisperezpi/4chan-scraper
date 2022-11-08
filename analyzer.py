@@ -36,9 +36,11 @@ def connect_ssh():
     ssh_client.connect(hostname='gicserver',username='luis',password=os.environ.get('GICSERVER_PW'))
     return ssh_client
 
-def dw_full_board_texts(boards_list, ssh_client):
+def download_full_board_texts(boards_list, grouped=True):
     boards_dp = os.path.join(SSH_DATA_DIR, BOARDS_DIR)
     text_dict = {}
+
+    ssh_client = connect_ssh()
 
     for boardname in boards_list:
         text_list = []
@@ -46,29 +48,38 @@ def dw_full_board_texts(boards_list, ssh_client):
         thread_dp = os.path.join(board_dp, THREADS_DIR)
         ftp_client = ssh_client.open_sftp()
         for file in ftp_client.listdir(thread_dp):
-            text_dict[boardname]=[]
+            thread_list=[]
             f = ftp_client.open(os.path.join(thread_dp, file), "r")
             dict_list = json.load(f)
             for th_dict in dict_list:
                 if 'sub' in th_dict:
-                    text_list.append(th_dict['sub'])
+                    thread_list.append(th_dict['sub'])
                 if 'com' in th_dict:
-                    text_list.append(th_dict['com'])
+                    thread_list.append(th_dict['com'])
+            text_list.append(thread_list)
             f.close()
         ftp_client.close()
         text_dict[boardname] = text_list
 
-    with open(os.path.join(DATA_DIR, 'fulltext.json'), 'w') as file:
-        json.dump(text_dict, file)
+    if grouped:
+        with open(os.path.join(DATA_DIR, 'fulltext.json'), 'w') as file:
+            json.dump(text_dict, file)
+    else:
+        for boardname in text_dict:
+            board_dp = os.path.join(boards_dp, f'{boardname}/')
+            with open(os.path.join(board_dp, 'fulltext.json'), 'w') as file:
+                json.dump(text_dict[boardname], file)
+
     return text_dict
 
-def read_full_board_texts(boards_list, ssh_client):
+def read_full_board_texts(boards_list, ssh_client, grouped=True):
     if 'fulltext.json' in os.listdir(DATA_DIR):
         with open(os.path.join(DATA_DIR, 'fulltext.json'), 'r') as file:
             text_dict = json.load(file)
         return text_dict
     else:
-        return dw_full_board_texts(boards_list, ssh_client)
+        return download_full_board_texts(boards_list, ssh_client, grouped=grouped)
+    
 
 
 
