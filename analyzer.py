@@ -2,7 +2,11 @@ import os
 import json
 from bs4 import BeautifulSoup
 import re
-import datetime
+from datetime import datetime
+import pandas as pd
+from tqdm import tqdm
+
+from sklearn.feature_extraction.text import CountVectorizer
 
 from flair.data import Sentence
 from flair.models.sequence_tagger_model import SequenceTagger
@@ -14,14 +18,15 @@ if not os.environ.get('GICSERVER_PW'):
 
 
 THREADS_DIR = 'threads'
-DATA_DIR = '/home/luis/data/4chan'
+SSH_DATA_DIR = '/home/luis/data/4chan'
+DATA_DIR = "data/4chan"
 BOARDS_DIR = 'boards'
 SEARCH_DIR = 'searchs'
 ANALYSIS_DIR = 'data/4chan/analysis'
 
 WANTED_BOARDS = ['pol']
 
-BATCH_COMMENTS_SIZE = 100
+BATCH_COMMENTS_SIZE = 50
 
 tagger = SequenceTagger.load("ner-fast")
 
@@ -31,8 +36,8 @@ def connect_ssh():
     ssh_client.connect(hostname='gicserver',username='luis',password=os.environ.get('GICSERVER_PW'))
     return ssh_client
 
-def full_board_texts(boards_list, ssh_client):
-    boards_dp = os.path.join(DATA_DIR, BOARDS_DIR)
+def dw_full_board_texts(boards_list, ssh_client):
+    boards_dp = os.path.join(SSH_DATA_DIR, BOARDS_DIR)
     text_dict = {}
 
     for boardname in boards_list:
@@ -53,7 +58,18 @@ def full_board_texts(boards_list, ssh_client):
         ftp_client.close()
         text_dict[boardname] = text_list
 
+    with open(os.path.join(DATA_DIR, 'fulltext.json'), 'w') as file:
+        json.dump(text_dict, file)
     return text_dict
+
+def read_full_board_texts(boards_list, ssh_client):
+    if 'fulltext.json' in os.listdir(DATA_DIR):
+        with open(os.path.join(DATA_DIR, 'fulltext.json'), 'r') as file:
+            text_dict = json.load(file)
+        return text_dict
+    else:
+        return dw_full_board_texts(boards_list, ssh_client)
+
 
 
 def clean_text(text_list):
@@ -65,6 +81,7 @@ def clean_text(text_list):
     text = re.sub("</span><br>", " ", text)
     soup = BeautifulSoup(text,'html.parser')
     return soup.get_text()
+
 
 def _sort_dict(unsorted_dict):
     for label, value in unsorted_dict.items():
@@ -89,6 +106,7 @@ def ner_text(text, entities={}):
     return entities
 
 
+
 if __name__ == '__main__':
     if not os.path.exists(DATA_DIR):
         os.mkdir(DATA_DIR)
@@ -97,13 +115,12 @@ if __name__ == '__main__':
     if not os.path.exists(ANALYSIS_DIR):
         os.mkdir(ANALYSIS_DIR)
     ssh_client = connect_ssh()
-    text_dict = full_board_texts(WANTED_BOARDS,ssh_client)
+    text_dict = read_full_board_texts(WANTED_BOARDS,ssh_client)
     entities = {}
     for item, value in text_dict.items():
-        for i in range(0, len(value), BATCH_COMMENTS_SIZE):
+        for i in tqdm(range(0, len(value), BATCH_COMMENTS_SIZE)):
             chunks = value[i:i+BATCH_COMMENTS_SIZE] 
             entities = ner_text(clean_text(chunks), entities=entities)
-            print("CHUNK")
     entities = _sort_dict(entities)
     now = datetime.now()
     now_str = now.strftime("%d-%m-%Y_%H:%M:%S")

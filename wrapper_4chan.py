@@ -5,10 +5,10 @@ import json
 import re
 from datetime import datetime
 
-THREADS_DIR = 'threads/'
+THREADS_DIR = 'threads'
 DATA_DIR = 'data/4chan'
-BOARDS_DIR = 'data/4chan/boards'
-SEARCH_DIR = 'data/4chan/searchs'
+BOARDS_DIR = 'boards'
+SEARCH_DIR = 'searchs'
 
 CATALOG_FILTER = [
     'no',
@@ -88,7 +88,8 @@ def configure_logger(boardname, board_dir):
 def full_update_board(boardname, board_dir="", catalog_f='catalog.json', logger=None):
     if board_dir == "":
         board_dir = f'{boardname}/'
-    board_dir = os.path.join(BOARDS_DIR, board_dir)
+    boards_dir = os.path.join(DATA_DIR, BOARDS_DIR)
+    board_dir = os.path.join(boards_dir, board_dir)
     threads_dir = os.path.join(board_dir, THREADS_DIR)
     if not os.path.exists(board_dir):
         os.mkdir(board_dir)
@@ -162,7 +163,8 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
     }
     if board_dir == "":
         board_dir = f'{boardname}/'
-    board_dir = os.path.join(BOARDS_DIR, board_dir)
+    boards_dir = os.path.join(DATA_DIR, BOARDS_DIR)
+    board_dir = os.path.join(boards_dir, board_dir)
     threads_dir = os.path.join(board_dir, THREADS_DIR)
     if not os.path.exists(board_dir):
         os.mkdir(board_dir)
@@ -220,9 +222,10 @@ def search_keyword_board(boardname, pattern, board_dir="", catalog_f='catalog.js
                 logger.exception(f'Error tomando información del thread {thread_no} en board {boardname}.')
                 break
         
-        with open(os.path.join(board_dir, 'catalog.json'), 'w') as file:
-            json.dump(catalog_historic, file)
-            logger.info(f'>>Updated historic catalog with new information. ({file.name})')
+        if relevant > 0:
+            with open(os.path.join(board_dir, 'catalog.json'), 'w') as file:
+                json.dump(catalog_historic, file)
+                logger.info(f'>>Updated historic catalog with new information. ({file.name})')
         return {
             "found_list" : list_found_threads,
             "total_threads" : total,
@@ -257,15 +260,18 @@ def search_keyword_4chan(pattern, boardname_list=[]):
         search_dict[boardname] = dict_found_threads
 
     logger.info(str(search_dict))
-    with open(os.path.join(SEARCH_DIR, f'search_{pattern}_{now_str}.json'), 'w') as file:
+    search_dir = os.path.join(DATA_DIR, SEARCH_DIR)
+    searchname_dir = os.path.join(search_dir, searchname_dir)
+    if not os.path.exists(searchname_dir):
+        os.mkdir(searchname_dir)
+    with open(os.path.join(searchname_dir, f'search_{now_str}.json'), 'w') as file:
         json.dump(search_dict, file, indent=4)
-
 
 if __name__ == '__main__':
     if not os.path.exists(DATA_DIR):
         os.mkdir(DATA_DIR)
-    if not os.path.exists(SEARCH_DIR):
-        os.mkdir(SEARCH_DIR)
-    if not os.path.exists(BOARDS_DIR):
-        os.mkdir(BOARDS_DIR)
-    search_keyword_4chan("russia|nafo|nato|ukrain", boardname_list=POLITICAL_BOARDS)
+    if not os.path.exists(os.path.join(DATA_DIR, SEARCH_DIR)):
+        os.mkdir(os.path.join(DATA_DIR, SEARCH_DIR))
+    if not os.path.exists(os.path.join(DATA_DIR, BOARDS_DIR)):
+        os.mkdir(os.path.join(DATA_DIR, BOARDS_DIR))
+    search_keyword_4chan("\\brussia|\\bnafo\\b|\\bnato\\b|\\bukrain", "russia_nato_nafo_ukrain")

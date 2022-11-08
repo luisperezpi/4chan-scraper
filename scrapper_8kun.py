@@ -9,12 +9,6 @@ BOARD_KEY = 'uri'
 
 DOMAIN = {
     'api': PROTOCOL + '8kun.top',   # API subdomain
-    'boards': PROTOCOL + 'boards.4chan.org', # HTML subdomain
-    'boards_4channel': PROTOCOL + 'boards.4channel.org', # HTML subdomain of 4channel worksafe, but 4chan.org still redirects
-    'file': PROTOCOL + 'i.4cdn.org',  # file (image) host
-    #'file': PROTOCOL + 'is.4chan.org', # new, slower image host
-    'thumbs': PROTOCOL + 'i.4cdn.org',# thumbs host
-    'static': PROTOCOL + 's.4cdn.org' # static host
 }
 
 
@@ -25,18 +19,9 @@ TEMPLATE = {
         'boards': DOMAIN['api'] + '/boards.json',
         'catalog': DOMAIN['api'] + '/{board}/catalog.json',
         'threadlist': DOMAIN['api'] + '/{board}/threads.json',
-        'thread': DOMAIN['api'] + '/{board}/res/{thread_id}.json',
+        'thread': DOMAIN['api'] + '/{board}/res/{thread_no}.json',
         'archive': DOMAIN['api'] + '/{board}/archive.json'
     },
-    'http': { # Standard HTTP viewing URLs
-        'board': DOMAIN['boards'] + '/{board}/{page}',
-        'thread': DOMAIN['boards'] + '/{board}/thread/{thread_id}'
-    },
-    'data': {
-        'file': DOMAIN['file'] + '/{board}/{tim}{ext}',
-        'thumbs': DOMAIN['thumbs'] + '/{board}/{tim}s.jpg',
-        'static': DOMAIN['static'] + '/image/{item}'
-    }
 }
 
 #
@@ -57,10 +42,10 @@ def _fetch_boards_metadata():
     resp = requests.get(dir)
     resp.raise_for_status()
     data = {
-        entry[BOARD_KEY]:entry for entry in resp.json()['boards']
+        entry[BOARD_KEY]: entry for entry in resp.json()
     }
     _metadata['boards'].update(data)
-    time.sleep(1)
+    #time.sleep(1)
 
 
 def get_all_boards_name(refresh=False):
@@ -113,7 +98,7 @@ def _fetch_catalog_metadata(
     resp.raise_for_status()
     data = resp.json()
     _metadata[boardname]['catalog']= data
-    time.sleep(1)
+    #time.sleep(1)
 
 def get_catalog(boardname, page=0, refresh=False, as_dict=True):
     """ Devuelve diccionario o lista con la informacion encontrada en el catalogo de un board   
@@ -174,7 +159,7 @@ def _fetch_threadlist_metadata(
     resp.raise_for_status()
     data = resp.json()
     _metadata[boardname]['threadlist']= data
-    time.sleep(1)
+    #time.sleep(1)
 
 def get_threadlist(boardname, page=0, refresh=False, as_dict=True):
     """ Devuelve diccionario o lista con la informacion encontrada en el catalogo de un board   
@@ -238,7 +223,7 @@ def _fetch_thread_metadata(
     resp.raise_for_status()
     data = resp.json()['posts']
     _metadata[boardname]['threads'][thread_no] = data
-    time.sleep(1)
+    #time.sleep(1)
 
 
 def get_thread(
@@ -308,7 +293,7 @@ def _fetch_archive_metadata(
     resp.raise_for_status()
     data = resp.json()
     _metadata[boardname]['archive']= data
-    time.sleep(1)
+    #time.sleep(1)
     
 
 def get_archive(
