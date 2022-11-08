@@ -256,9 +256,9 @@ def search_keyword_4chan(pattern, boardname_list=[]):
         logger.info(f'>>Found {l} matching threads in board {boardname}')
         search_dict[boardname] = dict_found_threads
 
+    logger.info(str(search_dict))
     with open(os.path.join(SEARCH_DIR, f'search_{pattern}_{now_str}.json'), 'w') as file:
-        json.dump(search_dict, file)
-
+        json.dump(search_dict, file, indent=4)
 
 
 if __name__ == '__main__':
