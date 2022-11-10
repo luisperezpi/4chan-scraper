@@ -257,7 +257,7 @@ def search_keyword_8kun(pattern, searchname, boardname_list=[]):
     
     logger.info(str(search_dict))
     search_dir = os.path.join(DATA_DIR, SEARCH_DIR)
-    searchname_dir = os.path.join(search_dir, searchname_dir)
+    searchname_dir = os.path.join(search_dir, searchname)
     if not os.path.exists(searchname_dir):
         os.mkdir(searchname_dir)
     with open(os.path.join(searchname_dir, f'search_{now_str}.json'), 'w') as file:
